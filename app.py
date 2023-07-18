@@ -28,9 +28,32 @@ def show_tweets():
     if "user_id" not in session:
         flash('Please Login First')
         return redirect('/')
-   
+    form = TweetForm()
+    all_tweets = Tweet.query.all()
+    if form.validate_on_submit():
+        text = form.text.data
+        new_tweet = Tweet(text=text, user_id=session["user_id"])
+        db.session.add(new_tweet)
+        db.session.commit()
+        flash("Tweet Created")
+        return redirect('/tweets')
 
-    return render_template('tweets.html')
+    return render_template('tweets.html', form=form, tweets=all_tweets)
+
+@app.route('/tweets/<int:id>', methods=["POST"])
+def delete_tweet(id):
+    """Delete Tweet"""
+    if 'user_id' not in session:
+        flash("Please log in first")
+        return redirect('/login')
+    tweet = Tweet.query.get_or_404(id)
+    if tweet.user_id == session["user_id"]:
+        db.session.delete(tweet)
+        db.session.commit()
+        flash("Tweet Deleted")
+        return redirect('/tweets')
+    flash("You dont have permission to do that")
+    return redirect('/tweets')
 
 @app.route('/register', methods=["GET", "POST"])
 def register_useer():

@@ -22,7 +22,14 @@
 
 <ul>
     {% for tweet in tweets %}
-    <li>{{tweet.text}}</li>
+    <li>
+        <b>{{tweet.user.username}}</b> - {{tweet.text}}
+        {% if session['user_id'] == tweet.user_id %}
+        <form style="display:inline;" action="/tweets/{{tweet.id}}" method="POST">
+            <button class="btn btn-sm btn-danger">X</button>
+        </form>
+        {% endif %}
+    </li>
     {% endfor %}
 </ul>
 {% endblock %}
