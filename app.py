@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, session, flash
 from flask_debugtoolbar import DebugToolbarExtension
 from models import connect_db, db, User, Tweet
 from forms import UserForm, TweetForm
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.app_context().push()
@@ -26,7 +27,7 @@ def show_homepage():
 def show_tweets():
     """Show tweet html"""
     if "user_id" not in session:
-        flash('Please Login First')
+        flash('Please Login First', "danger")
         return redirect('/')
     form = TweetForm()
     all_tweets = Tweet.query.all()
@@ -35,7 +36,7 @@ def show_tweets():
         new_tweet = Tweet(text=text, user_id=session["user_id"])
         db.session.add(new_tweet)
         db.session.commit()
-        flash("Tweet Created")
+        flash("Tweet Created", "success")
         return redirect('/tweets')
 
     return render_template('tweets.html', form=form, tweets=all_tweets)
@@ -44,15 +45,15 @@ def show_tweets():
 def delete_tweet(id):
     """Delete Tweet"""
     if 'user_id' not in session:
-        flash("Please log in first")
+        flash("Please log in first", "danger")
         return redirect('/login')
     tweet = Tweet.query.get_or_404(id)
     if tweet.user_id == session["user_id"]:
         db.session.delete(tweet)
         db.session.commit()
-        flash("Tweet Deleted")
+        flash("Tweet Deleted", "info")
         return redirect('/tweets')
-    flash("You dont have permission to do that")
+    flash("You dont have permission to do that", "danger")
     return redirect('/tweets')
 
 @app.route('/register', methods=["GET", "POST"])
@@ -66,9 +67,13 @@ def register_useer():
 
         new_user = User.register(username, password)
         db.session.add(new_user)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            form.username.errors.append("Username Not Availabe")
+            return render_template('register.html', form=form)
         session['user_id'] = new_user.id
-        flash('Welcome, Successfuly Created Your Account!')
+        flash('Welcome, Successfuly Created Your Account!', "success")
         return redirect('/tweets')
     return render_template('register.html', form=form)
 
@@ -82,7 +87,7 @@ def login_user():
 
         user = User.authenticate(username, password)
         if user:
-            flash(f"Welcome Back! {user.username}")
+            flash(f"Welcome Back! {user.username}", "primary")
             session['user_id'] = user.id
             return redirect('/tweets')
         else:
@@ -93,5 +98,5 @@ def login_user():
 @app.route('/logout')
 def logout_user():
     session.pop('user_id')
-    flash('Goodbye!')
+    flash('Goodbye!', "primary")
     return redirect('/')
